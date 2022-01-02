@@ -1,0 +1,4 @@
+image,choice
+/data/local-files/?d=home/ubuntu/labeling/folder/image1.jpg,Normal
+/data/local-files/?d=home/ubuntu/labeling/folder/image2.jpg,Others
+/data/local-files/?d=home/ubuntu/labeling/folder/image2.jpg,Cond1
