@@ -31,7 +31,7 @@ TMP_MODEL_OUTPUT_URI = "s3://<tmp-bucket-name>"
 FINAL_BUCKET = "<model-bucket-name>"
 MODEL_BUCKET = "<model-bucket-name>"
 MODEL_PREFIX = "class"
-ECG_DATA_BUCKET_S3 = "<annotated-data-bucket>"
+TRAINING_DATA_BUCKET_S3 = "<annotated-data-bucket>"
 PREVIOUS_LANG_MODEL_URI = f"s3://{MODEL_BUCKET}/{PREV_MODEL_NAME_PTH}" # This is pytorch model's S3 address 
 # Above model will be downloaded by sagemaker train job to perform incremental learning.
 
@@ -54,12 +54,12 @@ PREVIOUS_LANG_MODEL_URI = f"s3://{MODEL_BUCKET}/{PREV_MODEL_NAME_PTH}" # This is
 # #Downloading data from s3 bucket which have annotations available.
 # ! cp ./annotation-info.csv  ./ecg-annotated-data/annotation-info.csv
 
-# ECG_DATA_BUCKET = ECG_DATA_BUCKET_S3
+# TRAINING_DATA_BUCKET = TRAINING_DATA_BUCKET_S3
 # s3 = boto3.client("s3")
 # for fl in lst_images:
 #     fn = Path(fl).name
 #     #print(fn)
-#     s3.download_file(ECG_DATA_BUCKET,fn,f'./annotated-data/images/{fn}')
+#     s3.download_file(TRAINING_DATA_BUCKET,fn,f'./annotated-data/images/{fn}')
 
 sagemaker_session = sagemaker.Session()
 bucket = sagemaker_session.default_bucket()
@@ -80,7 +80,7 @@ hyperparameters={"epochs": 5, "lr": 3e-3}
 use_spot_instances = False
 max_run = 900
 max_wait = 1000 if use_spot_instances else None
-instance_type = 'ml.m5.xlarge' #"ml.p2.xlarge", # ml.p2.xlarge # ml.c5.2xlarge
+instance_type = 'ml.m5.xlarge' #"ml.p2.xlarge",  ml.c5.2xlarge
 checkpoint_s3_uri = (
     "s3://{}/{}/checkpoints/{}".format(bucket, prefix, job_name) if use_spot_instances else None
 )
@@ -141,15 +141,11 @@ upload_files = Path('./tmp-data/extract/').ls()
 for fl in upload_files:
     print("uploading: ", fl, " to: ", FINAL_BUCKET)
     s3.upload_file(str(fl), FINAL_BUCKET, str(fl.name))
-#cleanup
+# cleanup
 try:
     shutil.rmtree("./tmp-data")
 except:
     pass
-
-
-# In[17]:
-
 
 print(training_job_name)
 s3.delete_object(Bucket= 'tmp-model-artefacts', Key= training_job_name)
