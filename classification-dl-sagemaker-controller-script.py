@@ -1,19 +1,8 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-# In[1]:
-
-
-get_ipython().system(' pip install fastai==2.3.1 > /dev/null')
-get_ipython().system(' pip install pillow==8.2 > /dev/null')
+pip install fastai==2.3.1 > /dev/null
+pip install pillow==8.2 > /dev/null
 import fastai
 import PIL
 print(fastai.__version__, PIL.__version__)
-
-
-# In[2]:
-
-
 import pandas as pd
 import boto3
 import os
@@ -30,38 +19,21 @@ from fastai.vision.all import *
 import torch
 s3 = boto3.client("s3")
 
-
-# In[3]:
-
-
 def get_base_jobname(prefix = "ecg-dl"):
     ret = str(uuid.uuid4())
     ret =ret[0:8].replace("=", "a")
     return(prefix + "-" +  ret)
 
 
-# In[4]:
-
-
-#PREV_MODEL_NAME_PTH = 'ecg-model-resnet34-20211230-173706.pth' # This is the model which will be loaded for transfer learning.
-PREV_MODEL_NAME_PTH = 'ecg-model-resnet34-20220101-145613.pth' # This is the model which will be loaded for transfer learning.
-
-
-# In[5]:
-
-
-PREVIOUS_LANG_MODEL_PATH = "s3://ecg-models/"
-TMP_MODEL_OUTPUT_URI = "s3://tmp-model-artefacts"
-FINAL_BUCKET = "ecg-models"
-MODEL_BUCKET = "ecg-models"
-MODEL_PREFIX = "ecg"
-ECG_DATA_BUCKET_S3 = "ritesh-s3-ecg-annotated-data"
+PREV_MODEL_NAME_PTH = '<previous-model-name>.pth' # This is the model which will be loaded for incremental learning
+PREVIOUS_LANG_MODEL_PATH = "s3://<model-bucket-name>/"
+TMP_MODEL_OUTPUT_URI = "s3://<tmp-bucket-name>"
+FINAL_BUCKET = "<model-bucket-name>"
+MODEL_BUCKET = "<model-bucket-name>"
+MODEL_PREFIX = "class"
+ECG_DATA_BUCKET_S3 = "<annotated-data-bucket>"
 PREVIOUS_LANG_MODEL_URI = f"s3://{MODEL_BUCKET}/{PREV_MODEL_NAME_PTH}" # This is pytorch model's S3 address 
 # Above model will be downloaded by sagemaker train job to perform incremental learning.
-
-
-# In[6]:
-
 
 # RETAIN : Not required but useful code to list all the objects in a bucket #
 # all_models = s3.list_objects( Bucket = FINAL_BUCKET) ; 
@@ -71,10 +43,6 @@ PREVIOUS_LANG_MODEL_URI = f"s3://{MODEL_BUCKET}/{PREV_MODEL_NAME_PTH}" # This is
 #     if (str_key.find("encoder") == -1):
 #         str_key = lst_available_models.append(str_key)
 # lst_available_models.sort(reverse= True)
-
-
-# In[7]:
-
 
 # Data Prep Do not need to do every time, should only be done when new data is there
 # try:
@@ -86,40 +54,26 @@ PREVIOUS_LANG_MODEL_URI = f"s3://{MODEL_BUCKET}/{PREV_MODEL_NAME_PTH}" # This is
 # #Downloading data from s3 bucket which have annotations available.
 # ! cp ./annotation-info.csv  ./ecg-annotated-data/annotation-info.csv
 
-# ECG_DATA_BUCKET = "ritesh-s3-ecg-annotated-data"
+# ECG_DATA_BUCKET = ECG_DATA_BUCKET_S3
 # s3 = boto3.client("s3")
 # for fl in lst_images:
 #     fn = Path(fl).name
 #     #print(fn)
-#     s3.download_file(ECG_DATA_BUCKET,fn,f'./ecg-annotated-data/images/{fn}')
-
-
-# In[8]:
-
+#     s3.download_file(ECG_DATA_BUCKET,fn,f'./annotated-data/images/{fn}')
 
 sagemaker_session = sagemaker.Session()
 bucket = sagemaker_session.default_bucket()
-prefix = 'sagemaker/ecg-model-data'
+prefix = 'sagemaker/class-model-data'
 role = sagemaker.get_execution_role()
 inputs = ""
 
-
-# In[9]:
-
-
 # If data is already in the inputs location through an earlier run, then just provide the path, nothing to do here. 
 # Following command will upload the data to S3 bucket
-inputs = "s3://sagemaker-us-east-2-096374906812/sagemaker/ecg-model-data"
-bucket = "sagemaker-us-east-2-096374906812"
-#inputs = sagemaker_session.upload_data( path = "./ecg-annotated-data/", bucket=bucket, key_prefix=prefix)
+inputs = "s3://<sagemaker-account-name>/sagemaker/<class-model-data>"
+bucket = "<sagemaker-account-name>"
+#inputs = sagemaker_session.upload_data( path = "./annotated-data/", bucket=bucket, key_prefix=prefix)
 #print('input spec (in this case, just an S3 path): {}'.format(inputs))
-# if (inputs == ""):
-#     inputs = "s3://sagemaker-us-east-2-096374906812/sagemaker/ecg-model-data"
 print(bucket, inputs)
-
-
-# In[10]:
-
 
 base_job_name = get_base_jobname()
 hyperparameters={"epochs": 5, "lr": 3e-3}
@@ -130,7 +84,6 @@ instance_type = 'ml.m5.xlarge' #"ml.p2.xlarge", # ml.p2.xlarge # ml.c5.2xlarge
 checkpoint_s3_uri = (
     "s3://{}/{}/checkpoints/{}".format(bucket, prefix, job_name) if use_spot_instances else None
 )
-
 
 # Printing Training Inputs:
 print("************************************ Starting Training: ***************************************")
@@ -172,21 +125,9 @@ training_job_name = estimator.latest_training_job.name
 print("TRAINING JOB NAME:", training_job_name)
 
 
-# In[11]:
-
-
 # The job above uploads the models into output_path which is a S3 bucket. 
 # The training_job_name is a folder under which output dirctory contains the models in a file called model.tar.gz.
-
-
-# In[12]:
-
-
 key = training_job_name + "/output/model.tar.gz" ; print(key)
-
-
-# In[13]:
-
 
 # The output of training job is saved in the bucket specified. 
 # This is the place where files are extracted and saved in a specified location for further usage.
@@ -213,16 +154,5 @@ except:
 print(training_job_name)
 s3.delete_object(Bucket= 'tmp-model-artefacts', Key= training_job_name)
 #print(response)
-
-
-# In[19]:
-
-
-#! aws s3 rm s3://tmp-model-artefacts/{training_job_name} --recursive --dryrun
-
-
-# In[20]:
-
-
-#! aws s3 rm s3://tmp-model-artefacts/{training_job_name} --recursive
+#! aws s3 rm s3://{TMP_MODEL_BUCKET}/{training_job_name} --recursive --dryrun
 
