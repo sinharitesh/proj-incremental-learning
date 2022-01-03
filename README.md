@@ -1,4 +1,8 @@
 # proj-incremental-learning
+
+
+![data-flow](./incremental-lerning-with-sagemaker.png)
+
 There are two main files in this project - cls-dl-sm-controller-script.py (controller script) and classification-training.py (training script). First one is the script which invokes the second one after doing some preprocessing and later some cleaning up.
 The first script invokes an instance and provides various locations of S3 locations. This script first prepares the dataset for training and saves to a bucket.
 The second script downloads the data from the given bucket. It also downloads the pretrained model (has a .pth extension) locally uses the pretrained model to load the various weights before attempting to train.
